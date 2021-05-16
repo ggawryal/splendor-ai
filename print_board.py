@@ -5,10 +5,10 @@ from environment import splendor,config
 class PrintBoard(object):
 
     env = splendor.Splendor()
-    term_colors = env.colors.copy()
+    term_colors = env.COLORS.copy()
     term_colors[3] = 'magenta'
     term_colors.append('yellow')
-    colors = env.colors
+    colors = env.COLORS
 
     def color_card(card):
         card = card.split()

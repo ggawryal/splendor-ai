@@ -7,42 +7,18 @@ import os
 import json
 import numpy as np
 import pandas as pd
-import itertools as it
 from copy import deepcopy
 from environment import config
 
 
 
 class Splendor:
-
     def __init__(self):
         self.load_cards()
         self.reset()
         self.avaliable_actions = ['buy', 'pick', 'reserve', 'return']
-        self.colors = ['green', 'white', 'blue', 'black', 'red']
-
-        self.pick_tokens = {}
-        self.pick_tokens['3'] = list(it.combinations([0,1,2,3,4], 3))
-        self.pick_tokens['2'] = list(it.combinations([0,1,2,3,4], 2))
-        self.pick_tokens['doubles'] = [0,1,2,3,4]
-        self.pick_tokens['1'] = [0,1,2,3,4]
-
-        self.output_nodes = sum([
-            #TOKEN PICKING
-            sum(len(i) for i in self.pick_tokens.values()),
-
-            #BUYING AND RESERVING BOARD CARDS
-            3 * 4 * 2,
-
-            #BUYING RESERVED CARDS
-            3,
-
-            #TOKEN RETURNING
-            sum(len(i) for i in self.pick_tokens.values()),
-
-            #EMPTY MOVE
-            1
-        ])
+        self.COLORS = ['green', 'white', 'blue', 'black', 'red']
+   
 
     def reset(self, return_state=True):
         self.end = False
@@ -80,46 +56,7 @@ class Splendor:
             'end': self.end
         }
 
-        if self.end and self.current_player == 0:
-            self.reset(False)
-            #pass
-
         return game
-
-    def card_to_dict(self, card):
-        print(card['score'])
-
-    def return_json_state(self):
-        return_state = {}
-
-        players = deepcopy(self.players)
-        for player in players:
-            if len(player['reservations']) > 0:
-                for idx, reservation in enumerate(player['reservations']):
-                    player['reservations'][idx] = reservation.to_dict('index')
-
-        return_state['players'] = players
-        return_state['tokens'] = self.tokens.copy()
-
-        shown_tier1 = self.tier1[-min(4, len(self.tier1)):].to_dict('index')
-        shown_tier2 = self.tier2[-min(4, len(self.tier2)):].to_dict('index')
-        shown_tier3 = self.tier3[-min(4, len(self.tier3)):].to_dict('index')
-
-        return_state['tier1'] = shown_tier1
-        return_state['tier2'] = shown_tier2
-        return_state['tier3'] = shown_tier3
-
-        return_state['hidden_t1'] = len(self.tier1) - len(shown_tier1)
-        return_state['hidden_t2'] = len(self.tier2) - len(shown_tier2)
-        return_state['hidden_t3'] = len(self.tier3) - len(shown_tier3)
-
-        return_state['nobles'] = self.nobles.to_dict('index')
-
-        return_state['player_index'] = self.current_player
-        return_state['return_tokens'] = self.return_tokens
-        return_state['end'] = self.end
-
-        return json.dumps(return_state, indent=4)
 
     def move(self, move):
         action = list(move.keys())
@@ -197,16 +134,13 @@ class Splendor:
 
     def remove_card(self, card):
         if int(card['tier']) == 1:
-            card_idx = card.index.tolist()[0]
-            self.tier1 = self.tier1.drop(card_idx)
+            self.tier1 = self.tier1.drop(card.name)
 
         elif int(card['tier']) == 2:
-            card_idx = card.index.tolist()[0]
-            self.tier2 = self.tier2.drop(card_idx)
+            self.tier2 = self.tier2.drop(card.name)
 
         elif int(card['tier']) == 3:
-            card_idx = card.index.tolist()[0]
-            self.tier3 = self.tier3.drop(card_idx)
+            self.tier3 = self.tier3.drop(card.name)
 
         else:
             assert False, 'invalid tier'
@@ -217,7 +151,7 @@ class Splendor:
 
     def card_to_colors(self, card):
         # Returns neccesary tokens for this card separated by comas
-        return ','.join(str(int(card[c])) for c in self.colors)
+        return ','.join(str(int(card[c])) for c in self.COLORS)
 
     def show_cards(self):
         # Returns string versions of all visible cards on board
@@ -249,8 +183,8 @@ class Splendor:
         cards = self.players[self.current_player]['cards']
 
         # Tokens needed to buy this card by current player
-        token_diff = [tokens[i] + cards[i] - card[i] for i in self.colors]
-        missing_tokens = abs(sum(i.values[0] for i in token_diff if i.values[0] < 0))
+        token_diff = [tokens[i] + cards[i] - card[i] for i in self.COLORS]
+        missing_tokens = abs(sum(i for i in token_diff if i < 0))
 
         # Check if player has enough tokens to buy this card
         if self.players[self.current_player]['tokens']['gold'] >= missing_tokens:
@@ -261,9 +195,8 @@ class Splendor:
     def buy(self, card):
         # If this card was reserved
         if self.card_to_colors(card) in self.show_reservations():
-            self.players[self.current_player]['tokens']['gold'] += 1
             reservations = self.players[self.current_player]['reservations']
-            idx = card.index.tolist()[0]
+            idx = card.name
             idxes = [i.index.tolist()[0] for i in reservations]
             to_pop = idxes.index(idx)
             self.players[self.current_player]['reservations'].pop(to_pop)
@@ -272,7 +205,7 @@ class Splendor:
             # If player is buying card from board remove it
             self.remove_card(card)
 
-        for color in self.colors:
+        for color in self.COLORS:
             # Amount of this player's cards of certain color
             this_cards = self.players[self.current_player]['cards'][color]
 
@@ -298,7 +231,7 @@ class Splendor:
                     self.tokens[color] += this_tokens
 
         # Add card power (color) to player arsenal and card value to player score
-        card_color = self.colors[int(card['type'])-1]
+        card_color = self.COLORS[int(card['type'])-1]
         self.players[self.current_player]['cards'][card_color] += 1
         self.players[self.current_player]['score'] += int(card['value'])
 
@@ -357,15 +290,16 @@ class Splendor:
         # Remove card and one gold token from board 
         # and add card to player reservations
         self.remove_card(card)
-        self.players[self.current_player]['reservations'].append(card)
+        self.players[self.current_player]['reservations'].append(card.to_frame().transpose())
         self.tokens['gold'] -= 1
+        self.players[self.current_player]['tokens']['gold'] += 1
 
     def check_nobles(self):
         # Check if player that moved as the last could gain any nobleman
         this_cards = self.players[self.current_player]['cards']
         for nobleman in range(len(self.nobles)):
             this_nobleman = self.nobles[nobleman: nobleman+1]
-            for color in self.colors:
+            for color in self.COLORS:
                 if this_cards[color] < int(this_nobleman[color]):
                     break
 
@@ -381,95 +315,8 @@ class Splendor:
         if any(i['score'] >= config.WINNING_SCORE for i in self.players):
             self.end = True
 
-    def avaliable_outputs(self):
-        return_nodes = np.zeros(self.output_nodes)
-        player_tokens = self.players[self.current_player]['tokens']
-
-        if not self.return_tokens:
-
-            if sum(player_tokens.values()) <= 7:
-                for idx, combination in enumerate(self.pick_tokens['3']):
-                    if all(self.tokens[self.colors[i]] >= 1 for i in combination):
-                        return_nodes[idx] = 1
-
-            if sum(player_tokens.values()) <= 8:
-                for idx, combination in enumerate(self.pick_tokens['2']):
-                    if all(self.tokens[self.colors[i]] >= 1 for i in combination):
-                        return_nodes[10 + idx] = 1
-
-                for idx, combination in enumerate(self.pick_tokens['doubles']):
-                    if self.tokens[self.colors[combination]] >= 2:
-                        return_nodes[20 + idx] = 1
-
-            if sum(player_tokens.values()) <= 9:
-                for idx, combination in enumerate(self.pick_tokens['1']):
-                    if self.tokens[self.colors[combination]] >= 1:
-                        return_nodes[25 + idx] = 1
-
-            player_reservations = self.players[self.current_player]['reservations']
-            can_reserve = len(player_reservations) < 3 and self.tokens['gold'] > 0
-
-            shown_tier1 = self.tier1[-min(4, len(self.tier1)):]
-            shown_tier2 = self.tier2[-min(4, len(self.tier2)):]
-            shown_tier3 = self.tier3[-min(4, len(self.tier3)):]
-
-            #shown_tier1 = self.tier1[:min(4, len(self.tier1))]
-            #shown_tier2 = self.tier2[:min(4, len(self.tier2))]
-            #shown_tier3 = self.tier3[:min(4, len(self.tier3))]
-
-            for card in range(len(shown_tier1)):
-                this_card = shown_tier1[card: card+1]
-                if self.can_afford(this_card):
-                    return_nodes[30 + card*2] = 1
-                if can_reserve:
-                    return_nodes[31 + card*2] = 1
-
-            for card in range(len(shown_tier2)):
-                this_card = shown_tier2[card: card+1]
-                if self.can_afford(this_card):
-                    return_nodes[38 + card*2] = 1
-                if can_reserve:
-                    return_nodes[39 + card*2] = 1
-
-            for card in range(len(shown_tier3)):
-                this_card = shown_tier3[card: card+1]
-                if self.can_afford(this_card):
-                    return_nodes[46 + card*2] = 1
-                if can_reserve:
-                    return_nodes[47 + card*2] = 1
-
-            for idx, reservation in enumerate(player_reservations):
-                if self.can_afford(reservation):
-                    return_nodes[54+idx] = 1
-
-        else:
-
-            if sum(player_tokens.values()) <= 13:
-                for idx, combination in enumerate(self.pick_tokens['3']):
-                    if all(player_tokens[self.colors[i]] >= 1 for i in combination):
-                        return_nodes[57 + idx] = 1
-
-            if sum(player_tokens.values()) <= 12:
-                for idx, combination in enumerate(self.pick_tokens['2']):
-                    if all(player_tokens[self.colors[i]] >= 1 for i in combination):
-                        return_nodes[67 + idx] = 1
-
-                for idx, combination in enumerate(self.pick_tokens['doubles']):
-                    if player_tokens[self.colors[combination]] >= 2:
-                        return_nodes[77 + idx] = 1
-
-            if sum(player_tokens.values()) <= 11:
-                for idx, combination in enumerate(self.pick_tokens['1']):
-                    if player_tokens[self.colors[combination]] >= 1:
-                        return_nodes[82 + idx] = 1
-
-        return_nodes[-1] = 1
-
-        return return_nodes
-
     def load_cards(self):
         abspath = os.path.dirname(__file__)
-        print(abspath)
         if not os.path.isfile(os.path.join(abspath, 'cards.csv')):
             assert False, 'cards.csv file does not exist'
         if not os.path.isfile(os.path.join(abspath, 'nobles.csv')):
