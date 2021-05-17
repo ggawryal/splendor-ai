@@ -115,7 +115,42 @@ class AbstractModel:
         return np.array(mask)
     
     def state_to_vector(self, state):
-        return []
+        return np.array(
+            self.encode_player(state['players'][0]) + 
+            self.encode_player(state['players'][1]) + 
+            self.encode_tokens(state['tokens']) +
+            self.encode_tiers(state)
+        )
+
+    def encode_player(self, player):
+        v = [player['score']]
+        v += list(player['tokens'].values())
+        v += list(player['cards'].values())
+        for i in range(config.MAXIMUM_RESERVATIONS):
+            if i < len(player['reservations']):
+                v += self.encode_card(player['reservations'][i].iloc[0])
+            else:
+                v += self.encode_card(None)
+        return v
+
+    def encode_card(self, card):
+        if card is None:
+            return [0]*(2+len(self.COLORS))
+        v = [card.value, card.type]
+        for color in self.COLORS:
+            v += [card[color]]
+        return v
+    
+    def encode_tiers(self,state):
+        v = []
+        for tier in [3,2,1]:
+            for card_pos in range(4):
+                card = state['tier'+str(tier)].iloc[card_pos] if card_pos < len(state['tier'+str(tier)]) else None
+                v += self.encode_card(card)
+        return v
+
+    def encode_tokens(self,tokens):
+        return list(tokens.values())
 
     def get_best_move(self,env):
         state = env.return_state()
