@@ -54,6 +54,8 @@ class AlphaZero(AbstractModel):
 
     def get_pi(self, state):
         ns = np.array(self.N[state])
+        if sum(ns) == 0:
+            ns = np.ones(sum(self.output_shape))
         return ns/sum(ns)
 
 

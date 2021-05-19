@@ -123,7 +123,7 @@ class AbstractModel:
         return tuple([state['player_index']] + self.encode_player(state['players'][0]) + self.encode_player(state['players'][1]) + self.encode_tokens(state['tokens']) +self.encode_tiers(state))
 
     def encode_player(self, player):
-        v = [player['score']]
+        v = [player['score']] 
         v += list(player['tokens'].values())
         v += list(player['cards'].values())
         for i in range(config.MAXIMUM_RESERVATIONS):

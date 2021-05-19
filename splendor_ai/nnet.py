@@ -23,7 +23,7 @@ class NNet:
         )
     
     def train(self, examples):
-        print("training on",examples,"examples")
+        print("training on",len(examples),"examples")
 
         states = np.array([np.array(ex[0]) for ex in examples]).reshape(len(examples),-1).astype("float32")
         pis = np.array([np.array(ex[1]) for ex in examples]).reshape(len(examples),-1).astype("float32")
@@ -35,7 +35,32 @@ class NNet:
             epochs=3,
             batch_size=32,
         )
-        input()
+
+    def train_heuristic(self):
+        examples = []
+        for s in (0,1):
+            for i in range(20):
+                for j in range(20):
+                    for c2 in range(10):
+                        for c1 in range(10):
+                            v1,v2 = [0,0,0,0,0], [0,0,0,0,0]
+                            for _ in range(c1):
+                                v1[np.random.randint(0, 5)] += 1
+                            for _ in range(c2):
+                                v2[np.random.randint(0, 5)] += 1
+                            cards_offset = 7
+                            second_player_offset = 34
+                            ex = [0]*self.input_shape
+                            ex[0] = s
+                            ex[1] = i
+                            ex[1+cards_offset : 6+cards_offset] = v1
+                            ex[second_player_offset] = j
+                            ex[second_player_offset+cards_offset : second_player_offset+5+cards_offset] = v2
+                            pi = np.ones(self.output_shape)
+                            pi /= sum(pi)
+                            examples.append((ex,pi, (-1)**s*np.tanh((i*3+c1-j*3-c2))))
+        np.random.shuffle(examples)
+        self.train(examples)
 
     def predict(self, state_vector):
         return self.model.predict(np.array(state_vector).reshape(1,-1))

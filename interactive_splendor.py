@@ -123,7 +123,6 @@ def play_game(show_game, training_mode, names_and_models):
             
             move = model.get_best_move(env)
             s = env.move(move)
-
             if show_game:
                 print(move)
                 sys.stdout.write('Press ENTER to confirm')
@@ -138,12 +137,12 @@ def play_game(show_game, training_mode, names_and_models):
 
         if player_index == 0 and not s['return_tokens'] and not s['end']:
             game_round += 1
-        print(game_round)
+        #print("round",game_round)
         if game_round >= 80:
             env.end = True
 
-        #if show_game:
-        PrintBoard.print_state(s, game_round, player_index)
+        if show_game:
+            PrintBoard.print_state(s, game_round, player_index)
         if s['end']:
             if training_mode:
                 for model_name, model in players:
