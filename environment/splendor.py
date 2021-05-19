@@ -18,7 +18,6 @@ class Splendor:
         self.reset()
         self.avaliable_actions = ['buy', 'pick', 'reserve', 'return']
         self.COLORS = ['green', 'white', 'blue', 'black', 'red']
-   
 
     def reset(self, return_state=True):
         self.end = False
@@ -26,6 +25,7 @@ class Splendor:
         self.set_cards()
         self.create_players()
         self.place_tokens()
+        self.winner = 0.5
         
         if return_state:
             return self.return_state()
@@ -57,6 +57,20 @@ class Splendor:
         }
 
         return game
+    
+    def copy(self):
+        cp = Splendor()
+        cp.players = deepcopy(self.players)
+        cp.tier1 = deepcopy(self.tier1)
+        cp.tier2 = deepcopy(self.tier2)
+        cp.tier3 = deepcopy(self.tier3)
+        cp.tokens = self.tokens.copy()
+        cp.nobles = self.nobles.copy()
+        cp.end = self.end
+        cp.return_tokens = self.return_tokens
+        cp.current_player = self.current_player
+        cp.winner = self.winner
+        return cp
 
     def move(self, move):
         action = list(move.keys())
@@ -116,7 +130,6 @@ class Splendor:
 
         tokens = self.players[self.current_player]['tokens']
         current_amount = sum(tokens.values())
-
         if current_amount - returning_amount > 10:
             return False
 
@@ -284,6 +297,10 @@ class Splendor:
         if self.card_to_colors(card) not in self.show_cards():
             return False
 
+        # Player can't reserve card if he has 10 tokens (cause he gains one gold token)
+        if sum(self.players[self.current_player]['tokens'].values()) >= 10:
+            return False
+
         return True
 
     def reserve(self, card):
@@ -312,8 +329,10 @@ class Splendor:
                 break
 
     def check_winners(self):
-        if any(i['score'] >= config.WINNING_SCORE for i in self.players):
-            self.end = True
+        for i, player in enumerate(self.players):
+            if player['score'] >= config.WINNING_SCORE:
+                self.end = True
+                self.winner = i
 
     def load_cards(self):
         abspath = os.path.dirname(__file__)

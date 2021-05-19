@@ -14,8 +14,12 @@ class AbstractModel:
             config.MAXIMUM_RESERVATIONS, #BUYING RESERVED CARDS
             1 #EMPTY MOVE (pick nothing)
         ]
+        self.input_nodes = 157
 
     def get_scores_for_each_move(self,state): #abstract method, convert state using state_to_vector if needed
+        pass
+
+    def update_model_after_game(self, v):
         pass
 
     def combination_to_tokens(self, combination):
@@ -25,20 +29,22 @@ class AbstractModel:
         return to_pick
 
     def output_to_move(self, move_id, state):
-        for action_name in ('pick','return'):
-            for cnt in [3,2,1]:
-                if move_id < len(self.pick_tokens[cnt]):
-                    combination = self.pick_tokens[cnt][move_id]
-                    tokens = self.combination_to_tokens(combination)
+        if move_id < self.output_nodes[0] + self.output_nodes[1]:
+            for action_name in ('pick','return'):
+                for cnt in [3,2,1]:
+                    if move_id < len(self.pick_tokens[cnt]):
+                        combination = self.pick_tokens[cnt][move_id]
+                        tokens = self.combination_to_tokens(combination)
+                        return {action_name: tokens}
+                    move_id -= len(self.pick_tokens[cnt])
+
+                if move_id < len(self.pick_tokens['doubles']):
+                    tokens = {self.COLORS[move_id]: 2}
                     return {action_name: tokens}
-                move_id -= len(self.pick_tokens[cnt])
 
-            if move_id < len(self.pick_tokens['doubles']):
-                tokens = {self.COLORS[move_id]: 2}
-                return {action_name: tokens}
+                move_id -= len(self.pick_tokens['doubles'])
+        move_id -= self.output_nodes[0] + self.output_nodes[1]
 
-            move_id -= len(self.pick_tokens['doubles'])
-        
         for action_name in ('buy','reserve'):
             if move_id < 12:
                 tier, card_pos = (move_id//4)+1, move_id%4
@@ -66,7 +72,7 @@ class AbstractModel:
         for tokens_to_return in [3,2,1]:
             for combination in self.pick_tokens[tokens_to_return]:
                 #SECOND CONDITION ISN'T NEEDED, BUT REDUCES NUMBER OF RETURNS BY AI - ONLY CASE, WHEN IT CAN RETURN IS RESERVATION
-                if all(env.tokens[color] >= 1 for color in combination) and sum(player_tokens.values()) <= 10-tokens_to_return: 
+                if all(env.tokens[color] >= 1 for color in combination):
                     mask[offset] = 1
                 offset += 1
 
@@ -79,12 +85,11 @@ class AbstractModel:
 
         state = env.return_state()
         player_reservations = env.players[env.current_player]['reservations']
-        can_reserve = len(player_reservations) < config.MAXIMUM_RESERVATIONS and env.tokens['gold'] > 0
 
         for action in ('buy', 'reserve'):
             for tier in (1,2,3):
                 for card in range(4):
-                    if card < len(state['tier'+str(tier)]) and ((action == 'buy' and env.can_afford(state['tier'+str(tier)].iloc[card])) or (action == 'reserve' and can_reserve)):
+                    if card < len(state['tier'+str(tier)]) and ((action == 'buy' and env.can_afford(state['tier'+str(tier)].iloc[card])) or (action == 'reserve' and env.can_reserve(state['tier'+str(tier)].iloc[card]))):
                         mask[offset] = 1
                     offset += 1
 
@@ -93,7 +98,7 @@ class AbstractModel:
                 mask[offset] = 1
             offset += 1
         #warning, offset now doesn't necessarily points to index after reservations
-        mask[-1] = 1
+        assert sum(mask) > 0
         return np.array(mask)
                     
     def available_outputs_when_returning(self, env):
@@ -103,24 +108,19 @@ class AbstractModel:
 
         for tokens_to_return in [3,2,1]:
             for combination in self.pick_tokens[tokens_to_return]:
-                if all(player_tokens[color] >= 1 for color in combination) and sum(player_tokens.values()) <= 10+tokens_to_return:
+                if all(player_tokens[color] >= 1 for color in combination) and sum(player_tokens.values())-tokens_to_return <= 10:
                     mask[offset] = 1
                 offset += 1
 
         for color in self.pick_tokens['doubles']:
-            if player_tokens[color] >= 2:
+            if player_tokens[color] >= 2 and sum(player_tokens.values())-2 <= 10:
                 mask[offset] = 1
             offset += 1
 
         return np.array(mask)
     
     def state_to_vector(self, state):
-        return np.array(
-            self.encode_player(state['players'][0]) + 
-            self.encode_player(state['players'][1]) + 
-            self.encode_tokens(state['tokens']) +
-            self.encode_tiers(state)
-        )
+        return tuple([state['player_index']] + self.encode_player(state['players'][0]) + self.encode_player(state['players'][1]) + self.encode_tokens(state['tokens']) +self.encode_tiers(state))
 
     def encode_player(self, player):
         v = [player['score']]
@@ -160,7 +160,7 @@ class AbstractModel:
         if sum(aval_vector) != 1: 
             aval_vector[-1] = 0
 
-        raw_prediction = self.get_scores_for_each_move(state)
+        raw_prediction = self.get_scores_for_each_move(env)
         prediction = raw_prediction * aval_vector
         a = np.argmax(prediction)
         if prediction[a] <= 0:
