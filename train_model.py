@@ -1,13 +1,16 @@
 import sys
 sys.path.insert(0, 'splendor_ai')
 from splendor_ai.alpha_zero import AlphaZero
+from splendor_ai.mini_splendor_state_encoder import MiniSplendorStateEncoder
 import interactive_splendor
+from environment import minisplendor
 
-model = AlphaZero(0.2,60)
+
+model = AlphaZero(MiniSplendorStateEncoder(),0.2,10)
 model.net.train_heuristic()
-num_iters = 20
-num_comparision_games = 10
-needed_wins = 7
+num_iters = 1
+num_comparision_games = 1
+needed_wins = 0
 
 it = 0
 while True:
@@ -15,7 +18,7 @@ while True:
     print('self play')
     for i in range(num_iters):
         print('game',i)
-        interactive_splendor.play_game(False,True,(('m1',model), ('m2',model)))
+        interactive_splendor.play_game(False,True,(('m1',model), ('m2',model)), minisplendor.MiniSplendor())
 
     model2 = model.produce_new_version()
     model.is_learning, model2.is_learning = True, True
@@ -29,7 +32,7 @@ while True:
             players = (('m2',model2), ('m1',model))
             swapped = True
         
-        result = interactive_splendor.play_game(False,False,players)
+        result = interactive_splendor.play_game(False,False,players,minisplendor.MiniSplendor())
         print('game result = ',result if not swapped else 1-result)
         r[result if not swapped else 1-result] += 1
 

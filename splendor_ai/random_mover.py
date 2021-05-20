@@ -4,6 +4,5 @@ from abstract_model import AbstractModel
 
 class RandomMover(AbstractModel):
     def get_scores_for_each_move(self,env):
-        print(len(self.state_to_vector(env.return_state())))
-        return np.random.rand(sum(self.output_nodes))
+        return np.random.rand(self.output_nodes)
 

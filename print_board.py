@@ -57,12 +57,13 @@ class PrintBoard(object):
             print('score:  ' + colored(str(player['score']), attrs=['bold']))
         print('cards:  ' + PrintBoard.color_tokens(player['cards'], True))
         print('tokens: ' + PrintBoard.color_tokens(player['tokens']) + ' ')
-        print('nobles: ' + str(player['nobles']))
+        if 'nobles' in player:
+            print('nobles: ' + str(player['nobles']))
         columns_to_show = [
             'value',
             'type'
         ] + PrintBoard.colors
-        if len(player['reservations']) > 0:
+        if 'reservations' in player and len(player['reservations']) > 0:
             print('reservations: ', end='')
         #    print(colored('idx', attrs=['underline']) + '  ' + colored('value', attrs=['bold']) + '  type  price')
             colored_reservations = []
@@ -84,9 +85,10 @@ class PrintBoard(object):
         ] + PrintBoard.colors
         print('Round: ' + str(game_round))
         
-        print('Nobels'.center(47, '='))
-        for i in state['nobles'].to_string(index=False).splitlines()[1:]: print(' '*17 + PrintBoard.color_nobel(i))
-        print()
+        if state['nobles'] is not None:
+            print('Nobels'.center(47, '='))
+            for i in state['nobles'].to_string(index=False).splitlines()[1:]: print(' '*17 + PrintBoard.color_nobel(i))
+            print()
 
         #print(str(state['tier3'][columns_to_show]).splitlines()[0])
         print(colored('idx', attrs=['underline']) + '  ' + colored('value', attrs=['bold']) + '  type  price')

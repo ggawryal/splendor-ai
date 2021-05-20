@@ -3,11 +3,12 @@ import os
 import time
 import sys
 
-from environment import splendor,config
+from environment import splendor,config, minisplendor
 from print_board import PrintBoard
-
 sys.setrecursionlimit(10000)
 sys.path.insert(0, 'splendor_ai')
+from splendor_state_encoder import SplendorStateEncoder
+from mini_splendor_state_encoder import MiniSplendorStateEncoder
 from model_loader import load_model
 
 
@@ -32,7 +33,7 @@ def get_card(s, player_index, card_idx):
         return reservation.iloc[0]
 
 
-def play_game(show_game, training_mode, names_and_models):
+def play_game(show_game, training_mode, names_and_models, env):
     players = names_and_models
             
     if show_game:
@@ -50,7 +51,6 @@ def play_game(show_game, training_mode, names_and_models):
         print('\tto end game simply type one of following: „end“, „q“, „bye“, CTRIL-C or CTRIL-D')
         print()
 
-    env = splendor.Splendor()
     s = env.return_state()
 
     short = {'g': 'green', 'w': 'white', 'b': 'blue', 'k': 'black', 'r': 'red'}
@@ -137,7 +137,6 @@ def play_game(show_game, training_mode, names_and_models):
 
         if player_index == 0 and not s['return_tokens'] and not s['end']:
             game_round += 1
-        #print("round",game_round)
         if game_round >= 80:
             env.end = True
 
@@ -151,9 +150,17 @@ def play_game(show_game, training_mode, names_and_models):
             return env.winner
             
 if __name__ == '__main__':
-    names_and_models = [('p',None)] * config.PLAYERS
-    for i, name in enumerate(sys.argv[1:]):
-        if name != 'p':
-            names_and_models[i] = (name, load_model(name))
+    version = sys.argv[1]
+    if version == 'm' or version == 'mini':
+        env = minisplendor.MiniSplendor()
+        state_encoder = MiniSplendorStateEncoder()
+    else:
+        env = splendor.Splendor()
+        state_encoder = SplendorStateEncoder()
 
-    play_game(True, False, names_and_models)
+    names_and_models = [('p',None)] * config.PLAYERS
+    for i, name in enumerate(sys.argv[2:]):
+        if name != 'p':
+            names_and_models[i] = (name, load_model(name,state_encoder))
+
+    play_game(True, False, names_and_models, env)
