@@ -8,9 +8,9 @@ from environment import minisplendor
 
 model = AlphaZero(MiniSplendorStateEncoder(),0.2,10)
 model.net.train_heuristic()
-num_iters = 1
-num_comparision_games = 1
-needed_wins = 0
+num_iters = 50
+num_comparision_games = 20
+needed_wins = 14
 
 it = 0
 while True:

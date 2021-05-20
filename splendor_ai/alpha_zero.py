@@ -69,20 +69,17 @@ class AlphaZero(AbstractModel):
         pi = self.get_pi(s)
         if self.is_learning:
             self.examples.append((s, pi.copy(),None))
-        return pi #+1 ?
+        return pi
 
     def get_best_move(self,env):
         state = env.return_state()
         aval_vector = self.state_encoder.available_outputs(env)
-
-        #empty move not possible when other is possible
-        if sum(aval_vector) != 1: 
-            aval_vector[-1] = 0
-
         raw_prediction = self.get_scores_for_each_move(env)
         prediction = raw_prediction * aval_vector
-        for i in range(len(prediction)):
-            assert prediction[i] == raw_prediction[i]
+        assert sum(prediction) > 0
+        prediction /= sum(prediction)
+        #for i in range(len(prediction)):
+        #    assert prediction[i] == raw_prediction[i]
         return self.state_encoder.output_to_move(np.random.choice(len(prediction), p=prediction),state)
 
 
