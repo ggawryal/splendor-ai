@@ -6,11 +6,11 @@ import interactive_splendor
 from environment import minisplendor
 
 
-model = AlphaZero(MiniSplendorStateEncoder(),0.2,10)
+model = AlphaZero(MiniSplendorStateEncoder(),0.3,15)
 model.net.train_heuristic()
 num_iters = 50
 num_comparision_games = 20
-needed_wins = 14
+needed_wins = 13
 
 it = 0
 while True:
@@ -34,6 +34,8 @@ while True:
         
         result = interactive_splendor.play_game(False,False,players,minisplendor.MiniSplendor())
         print('game result = ',result if not swapped else 1-result)
+        if result not in [0,1]:
+            continue
         r[result if not swapped else 1-result] += 1
 
     print('loses = ',r[0],',wins = ',r[1])

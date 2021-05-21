@@ -17,8 +17,8 @@ class AlphaZero(AbstractModel):
         self.net = NNet(self.input_nodes, self.output_nodes)
 
     def simulate_game(self, env,depth=0):
-        if env.end or depth >= 80: 
-            return self.get_score_at_end_pos(env.current_player, env.winner)
+        if env.end or depth >= 100:
+            return -self.get_score_at_end_pos(env.current_player, env.winner)
 
         s = self.state_encoder.state_to_vector(env.return_state(False))
         
@@ -62,7 +62,7 @@ class AlphaZero(AbstractModel):
     def get_scores_for_each_move(self,env):
         for _ in range(self.number_of_mcts_simulations):
             ecp = env.copy()
-            result = self.simulate_game(ecp)
+            result = self.simulate_game(ecp,0)
             #print('game_result = ',result)
              
         s = self.state_encoder.state_to_vector(env.return_state(False))
