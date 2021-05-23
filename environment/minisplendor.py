@@ -24,10 +24,10 @@ class MiniSplendor:
         self.avaliable_actions = ['buy', 'pick', 'return']
         self.COLORS = ['green', 'white', 'blue', 'black', 'red']
 
-    def reset(self, return_state=True):
+    def reset(self, return_state=True, shuffle_cards = False):
         self.end = False
         self.return_tokens = False
-        self.set_cards()
+        self.set_cards(shuffle_cards)
         self.create_players()
         self.place_tokens()
         self.winner = 0.5
@@ -263,9 +263,11 @@ class MiniSplendor:
             'gold': 0
         }
 
-    def set_cards(self):
-        # Don't shuffle cards
+    def set_cards(self, shuffle): # Don't shuffle cards
+        
         shuffled_cards = self.primary_cards.copy()
+        if shuffle:
+            shuffled_cards = self.primary_cards.sample(frac=1)
 
         # Organize cards in relation to their tier
         t1_idx = shuffled_cards['tier'] == 1

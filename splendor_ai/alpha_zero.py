@@ -1,6 +1,5 @@
 import numpy as np
 from abstract_model import AbstractModel
-from environment import config
 from nnet import NNet
 
 class AlphaZero(AbstractModel):
@@ -17,23 +16,25 @@ class AlphaZero(AbstractModel):
         self.net = NNet(self.input_nodes, self.output_nodes)
 
     def simulate_game(self, env,depth=0):
-        if env.end or depth >= 100:
-            return -self.get_score_at_end_pos(env.current_player, env.winner)
-
         s = self.state_encoder.state_to_vector(env.return_state(False))
+        if s not in self.visited_states:
+            self.Q[s] = [0]*self.output_nodes
+            self.N[s] = [0]*self.output_nodes
+            
+        if env.end or depth >= 200:
+            return self.get_score_at_end_pos(env.current_player, env.winner)
+
         
         if s not in self.visited_states:
             self.visited_states.add(s)
-
             prediction = self.net.predict(s)
             self.P[s] = prediction[0][0]
             v = prediction[1][0][0]
-
-            self.Q[s] = [0]*self.output_nodes
-            self.N[s] = [0]*self.output_nodes
+            print(v)
             return v
     
         best_action = (-float("inf"), -1)
+
         for action, avail in enumerate(self.state_encoder.available_outputs(env)):
             if avail:
                 upper_confidence_bound = self.Q[s][action] + self.exploration_rate * self.P[s][action]*(sum(self.N[s])**0.5)/(1+self.N[s][action])
@@ -47,6 +48,7 @@ class AlphaZero(AbstractModel):
         v = self.simulate_game(env,depth+1)
         if cur_player != player_after_move:
             v *= -1
+    
         
         self.Q[s][action] = (self.N[s][action]*self.Q[s][action] + v)/(self.N[s][action]+1)
         self.N[s][action] += 1

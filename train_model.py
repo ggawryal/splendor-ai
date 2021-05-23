@@ -7,7 +7,7 @@ from environment import minisplendor
 
 
 model = AlphaZero(MiniSplendorStateEncoder(),0.3,15)
-model.net.train_heuristic()
+model.net.train_heuristic(model.state_encoder,minisplendor.MiniSplendor())
 num_iters = 50
 num_comparision_games = 20
 needed_wins = 13
